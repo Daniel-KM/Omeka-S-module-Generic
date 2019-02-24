@@ -100,8 +100,11 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         }
 
         $settings = $services->get('Omeka\Settings');
+
+        $this->initDataToPopulate($settings, 'config');
+
         $data = $this->prepareDataToPopulate($settings, 'config');
-        if (empty($data)) {
+        if (is_null($data)) {
             return;
         }
 
@@ -317,8 +320,31 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         }
 
         $settings = $services->get($settingsTypes[$settingsType]);
+
+        switch ($settingsType) {
+            case 'settings':
+                $id = null;
+                break;
+            case 'site_settings':
+                $id = $services->get('ControllerPluginManager')->get('currentSite')->id();
+                break;
+            case 'user_settings':
+                /** @var \Zend\Router\RouteMatch $routeMatch */
+                $routeMatch = $event->getRouteMatch();
+                if ($routeMatch->getMatchedRouteName() !== 'admin/site/slug/action'
+                    || $routeMatch->getParam('controller') !== 'user'
+                    || !$routeMatch->getParam('id')
+                ) {
+                    return;
+                }
+                $id = $routeMatch->getParam('id');
+                break;
+        }
+
+        $this->initDataToPopulate($settings, $settingsType, $id);
+
         $data = $this->prepareDataToPopulate($settings, $settingsType);
-        if (empty($data)) {
+        if (is_null($data)) {
             return;
         }
 
@@ -339,14 +365,16 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
      * @todo Use form methods to populate.
      * @param SettingsInterface $settings
      * @param string $settingsType
-     * @return array
+     * @return array|null
      */
     protected function prepareDataToPopulate(SettingsInterface $settings, $settingsType)
     {
         $config = $this->getConfig();
         $space = strtolower(static::NAMESPACE);
-        if (empty($config[$space][$settingsType])) {
-            return;
+        // Use isset() instead of empty() to give the possibility to display a
+        // specific form.
+        if (!isset($config[$space][$settingsType])) {
+            return null;
         }
 
         $defaultSettings = $config[$space][$settingsType];
@@ -358,6 +386,51 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         }
 
         return $data;
+    }
+
+    /**
+     * Initialize each original settings, if not ready.
+     *
+     * If the default settings were never registered, it means an incomplete
+     * config, install or upgrade, or a new site or a new user. In all cases,
+     * check it and save defauilt value first.
+     *
+     * @param SettingsInterface $settings
+     * @param string $settingsType
+     * @param int $id
+     */
+    protected function initDataToPopulate(SettingsInterface $settings, $settingsType, $id = null)
+    {
+        // This method is not in the interface, but is set for config, site and
+        // user settings.
+        if (!method_exists($settings, 'getTableName')) {
+            return;
+        }
+
+        $config = $this->getConfig();
+        $space = strtolower(static::NAMESPACE);
+        if (empty($config[$space][$settingsType])) {
+            return;
+        }
+
+        /** @var \Doctrine\DBAL\Connection $connection */
+        $connection = $this->getServiceLocator()->get('Omeka\Connection');
+        if ($id) {
+            if (!method_exists($settings, 'getTargetIdColumnName')) {
+                return;
+            }
+            $sql = sprintf('SELECT id, value FROM %s WHERE %s = ?', $settings->getTableName(), $settings->getTargetIdColumnName());
+            $stmt = $connection->query($sql, [$id]);
+        } else {
+            $sql = sprintf('SELECT id, value FROM %s', $settings->getTableName());
+            $stmt = $connection->query($sql);
+        }
+        $currentSettings = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+        $defaultSettings = $config[$space][$settingsType];
+        $missingSettings = array_diff_key($defaultSettings, $currentSettings);
+        foreach ($missingSettings as $name => $value) {
+            $settings->set($name, $value);
+        }
     }
 
     /**
