@@ -10,7 +10,8 @@ in the main `config/module.config.php` file, inside a key with the lowercase
 module name, with sub-keys `config`, `settings`, `site_settings`, `user_settings`
 and `block_settings`. All the forms have just to be standard Zend forms.
 Eventual install and uninstall sql can be set in `data/install/` and upgrade
-code in `data/scripts`.
+code in `data/scripts`. Another class allows to check and install resources
+(vocabulary, resource templates, custom vocab, etc.).
 
 
 Installation
@@ -24,6 +25,8 @@ installed or not enabled in the admin modules panel.
 
 Usage (for developer)
 ---------------------
+
+*** Main Usage
 
 This module contains a generic abstract class `AbstractModule`, that extends
 itself the Omeka one, so make your module extends it.
@@ -48,6 +51,36 @@ class Module extends AbstractModule
     const NAMESPACE = __NAMESPACE__;
 }
 ```
+
+*** Installing resources
+
+To install resources, you need to include another file, for example:
+
+```
+    public function install(ServiceLocatorInterface $serviceLocator)
+    {
+        parent::install($serviceLocator);
+
+        $this->setServiceLocator($serviceLocator);
+        $this->installResources();
+    }
+
+    protected function installResources()
+    {
+        require_once dirname(__DIR__) . '/Generic/InstallResources.php';
+
+        $services = $this->getServiceLocator();
+        $installResources = new \Generic\InstallResources($services);
+        $installResources = $installResources();
+
+        // Check and install a resource template.
+        $installResources->createResourceTemplate($filepath);
+        ...
+    }
+```
+
+This second part of the module is still in development to install resources
+automatically.
 
 
 Warning
@@ -91,7 +124,7 @@ altered, and that no provisions are either added or removed herefrom.
 Copyright
 ---------
 
-* Copyright Daniel Berthereau, 2018 (see [Daniel-KM] on GitHub)
+* Copyright Daniel Berthereau, 2018-2019 (see [Daniel-KM] on GitHub)
 
 
 [Generic module]: https://github.com/Daniel-KM/Omeka-S-module-Generic
