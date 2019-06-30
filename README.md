@@ -52,6 +52,23 @@ class Module extends AbstractModule
 }
 ```
 
+If you prefer not to force install of module Generic, you can copy the file `Generic/AbstractModule.php`
+in folder `src/` of your module, then require it like that:
+
+```php
+namespace MyModule;
+if (!class_exists(\Generic\AbstractModule::class)) {
+    require file_exists(dirname(__DIR__) . '/Generic/AbstractModule.php')
+        ? dirname(__DIR__) . '/Generic/AbstractModule.php'
+        : __DIR__ . '/src/Generic/AbstractModule.php';
+}
+use Generic\AbstractModule;
+class Module extends AbstractModule
+{
+    const NAMESPACE = __NAMESPACE__;
+}
+```
+
 *** Installing resources
 
 To install resources, you need to include another file, for example:
