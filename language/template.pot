@@ -1,0 +1,94 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-07-15 00:00+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: AbstractModule.php:453
+#, php-format
+msgid "This module requires the module \"%s\"."
+msgstr ""
+
+#: AbstractModule.php:473
+#, php-format
+msgid "This module requires modules \"%s\"."
+msgstr ""
+
+#: AbstractModule.php:541
+#, php-format
+msgid ""
+"The module \"%s\" was automatically deactivated because the dependencies are "
+"unavailable."
+msgstr ""
+
+#: InstallResources.php:76
+#, php-format
+msgid "The file \"%s\" cannot be read. Check your file system."
+msgstr ""
+
+#: InstallResources.php:101 InstallResources.php:225
+#, php-format
+msgid ""
+"An error occured when adding the prefix \"%s\": another vocabulary exists. "
+"Resolve the conflict before installing this module."
+msgstr ""
+
+#: InstallResources.php:131
+#, php-format
+msgid ""
+"A resource template named \"%s\" exists: rename it or remove it before "
+"installing this module."
+msgstr ""
+
+#: InstallResources.php:161
+msgid "The current version of this module requires the module Custom Vocab."
+msgstr ""
+
+#: InstallResources.php:168
+#, php-format
+msgid ""
+"A custom vocab named \"%s\" exists and has not the needed terms: rename it "
+"or remove it before installing this module."
+msgstr ""
+
+#: InstallResources.php:178
+#, php-format
+msgid ""
+"A custom vocab named \"%s\" exists and has not the needed language (\"%s\"): "
+"check it or remove it before installing this module."
+msgstr ""
+
+#: InstallResources.php:215
+#, php-format
+msgid "The vocabulary \"%s\" was already installed and was kept."
+msgstr ""
+
+#: InstallResources.php:245
+#, php-format
+msgid ""
+"An error occured when adding the prefix \"%s\" and the associated "
+"properties: %s"
+msgstr ""
+
+#: InstallResources.php:275
+#, php-format
+msgid "The resource template named \"%s\" is already available and is skipped."
+msgstr ""
+
+#: InstallResources.php:300 InstallResources.php:433
+#, php-format
+msgid "The custom vocab named \"%s\" is not available."
+msgstr ""
