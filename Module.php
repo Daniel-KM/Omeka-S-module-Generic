@@ -16,4 +16,5 @@ use Omeka\Module\AbstractModule;
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  */
 class Module extends AbstractModule
-{}
+{
+}
