@@ -96,7 +96,7 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         $formManager = $services->get('FormElementManager');
         $formClass = static::NAMESPACE . '\Form\ConfigForm';
         if (!$formManager->has($formClass)) {
-            return;
+            return '';
         }
 
         $settings = $services->get('Omeka\Settings');
@@ -105,14 +105,13 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
 
         $data = $this->prepareDataToPopulate($settings, 'config');
         if (is_null($data)) {
-            return;
+            return '';
         }
 
         $form = $services->get('FormElementManager')->get($formClass);
         $form->init();
         $form->setData($data);
-        $html = $renderer->formCollection($form);
-        return $html;
+        return $renderer->formCollection($form);
     }
 
     public function handleConfigForm(AbstractController $controller)
@@ -178,14 +177,15 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
      * Execute a sql from a file.
      *
      * @param string $filepath
-     * @return mixed
+     * @return int|null
      */
     protected function execSqlFromFile($filepath)
     {
         if (!file_exists($filepath) || !filesize($filepath) || !is_readable($filepath)) {
-            return;
+            return null;
         }
         $services = $this->getServiceLocator();
+        /** @var \Doctrine\DBAL\Connection $connection */
         $connection = $services->get('Omeka\Connection');
         $sql = file_get_contents($filepath);
         return $connection->exec($sql);
@@ -364,6 +364,7 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
      * To be overridden by module for specific keys.
      *
      * @todo Use form methods to populate.
+     *
      * @param SettingsInterface $settings
      * @param string $settingsType
      * @return array|null

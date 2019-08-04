@@ -204,7 +204,7 @@ class InstallResources
         try {
             /** @var \Omeka\Api\Representation\VocabularyRepresentation $vocabularyRepresentation */
             $vocabularyRepresentation = $api
-            ->read('vocabularies', ['prefix' => $prefix])->getContent();
+                ->read('vocabularies', ['prefix' => $prefix])->getContent();
         } catch (NotFoundException $e) {
             $vocabularyRepresentation = null;
         }
@@ -293,7 +293,7 @@ class InstallResources
             $label = $templateProperty['data_type_label'] ?: $templateProperty['label'];
             try {
                 $customVocab = $api
-                ->read('custom_vocabs', ['label' => $label])->getContent();
+                    ->read('custom_vocabs', ['label' => $label])->getContent();
             } catch (NotFoundException $e) {
                 throw new ModuleCannotInstallException(
                     new Message(
