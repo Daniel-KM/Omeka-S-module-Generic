@@ -168,7 +168,17 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
 
     public function handleUserSettings(Event $event)
     {
-        $this->handleAnySettings($event, 'user_settings');
+        $services = $this->getServiceLocator();
+        /** @var \Omeka\Mvc\Status $status */
+        $status = $services->get('Omeka\Status');
+        if ($status->isAdminRequest()) {
+            /** @var \Zend\Router\Http\RouteMatch $routeMatch */
+            $routeMatch = $services->get('Application')->getMvcEvent()->getRouteMatch();
+            if (!in_array($routeMatch->getParam('controller'), ['Omeka\Controller\Admin\User', 'user'])) {
+                return;
+            }
+            $this->handleAnySettings($event, 'user_settings');
+        }
     }
 
     /**
@@ -380,23 +390,22 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
                 $id = $site()->id();
                 break;
             case 'user_settings':
-                /** @var \Zend\Router\RouteMatch $routeMatch */
-                $routeMatch = $event->getRouteMatch();
-                if ($routeMatch->getMatchedRouteName() !== 'admin/site/slug/action'
-                    || $routeMatch->getParam('controller') !== 'user'
-                    || !$routeMatch->getParam('id')
-                ) {
-                    return;
-                }
+                /** @var \Zend\Router\Http\RouteMatch $routeMatch */
+                $routeMatch = $services->get('Application')->getMvcEvent()->getRouteMatch();
                 $id = $routeMatch->getParam('id');
                 break;
         }
 
         $this->initDataToPopulate($settings, $settingsType, $id);
 
-        $data = $this->prepareDataToPopulate($settings, $settingsType);
-        if (is_null($data)) {
-            return;
+        // Allow to use a form without an id, for example to create a user.
+        if ($settingsType !== 'settings' && !$id) {
+            $data = [];
+        } else {
+            $data = $this->prepareDataToPopulate($settings, $settingsType);
+            if (is_null($data)) {
+                return;
+            }
         }
 
         // Simplify config of settings.
@@ -405,11 +414,23 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
 
         $space = strtolower(static::NAMESPACE);
 
+        /** @var \Zend\Form\Form $form */
         $fieldset = $services->get('FormElementManager')->get($settingFieldsets[$settingsType]);
         $fieldset->setName($space);
         $form = $event->getTarget();
-        $form->add($fieldset);
-        $form->get($space)->populateValues($data);
+        // The user view is managed differently.
+        if ($settingsType === 'user_settings') {
+            // This process allows to save first level elements automatically.
+            // @see \Omeka\Controller\Admin\UserController::editAction()
+            $formFieldset = $form->get('user-settings');
+            foreach ($fieldset->getElements() as $element) {
+                $formFieldset->add($element);
+            }
+            $formFieldset->populateValues($data);
+        } else {
+            $form->add($fieldset);
+            $form->get($space)->populateValues($data);
+        }
     }
 
     /**
