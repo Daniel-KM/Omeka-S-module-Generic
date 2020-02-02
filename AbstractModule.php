@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright Daniel Berthereau, 2018-2019
+ * Copyright Daniel Berthereau, 2018-2020
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
