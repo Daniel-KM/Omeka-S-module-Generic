@@ -318,6 +318,8 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
     /**
      * Set, delete or update all settings of a specific type.
      *
+     * It processes main settings, or one site, or one user.
+     *
      * @param SettingsInterface $settings
      * @param string $settingsType
      * @param string $process
@@ -438,6 +440,66 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
     }
 
     /**
+     * Initialize each original settings, if not ready.
+     *
+     * If the default settings were never registered, it means an incomplete
+     * config, install or upgrade, or a new site or a new user. In all cases,
+     * check it and save default value first.
+     *
+     * @param SettingsInterface $settings
+     * @param string $settingsType
+     * @param int $id Site id or user id.
+     * @param array $values Specific values to populate, e.g. translated strings.
+     * @param bool True if processed.
+     */
+    protected function initDataToPopulate(SettingsInterface $settings, $settingsType, $id = null, array $values = [])
+    {
+        // This method is not in the interface, but is set for config, site and
+        // user settings.
+        if (!method_exists($settings, 'getTableName')) {
+            return false;
+        }
+
+        $config = $this->getConfig();
+        $space = strtolower(static::NAMESPACE);
+        if (empty($config[$space][$settingsType])) {
+            return false;
+        }
+
+        /** @var \Doctrine\DBAL\Connection $connection */
+        $connection = $this->getServiceLocator()->get('Omeka\Connection');
+        if ($id) {
+            if (!method_exists($settings, 'getTargetIdColumnName')) {
+                return false;
+            }
+            $sql = sprintf('SELECT id, value FROM %s WHERE %s = :target_id', $settings->getTableName(), $settings->getTargetIdColumnName());
+            $stmt = $connection->executeQuery($sql, ['target_id' => $id]);
+        } else {
+            $sql = sprintf('SELECT id, value FROM %s', $settings->getTableName());
+            $stmt = $connection->query($sql);
+        }
+
+        $currentSettings = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+        $defaultSettings = $config[$space][$settingsType];
+        // Skip settings that are arrays, because the fields "multi-checkbox"
+        // and "multi-select" are removed when no value are selected, so it's
+        // not possible to determine if it's a new setting or an old empty
+        // setting currently. So fill them via upgrade in that case or fill the
+        // values.
+        // TODO Find a way to save empty multi-checkboxes and multi-selects (core fix).
+        $defaultSettings = array_filter($defaultSettings, function ($v) {
+            return !is_array($v);
+        });
+        $missingSettings = array_diff_key($defaultSettings, $currentSettings);
+
+        foreach ($missingSettings as $name => $value) {
+            $settings->set($name, array_key_exists($name, $values) ? $values[$name] : $value);
+        }
+
+        return true;
+    }
+
+    /**
      * Prepare data for a form or a fieldset.
      *
      * To be overridden by module for specific keys.
@@ -467,61 +529,6 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         }
 
         return $data;
-    }
-
-    /**
-     * Initialize each original settings, if not ready.
-     *
-     * If the default settings were never registered, it means an incomplete
-     * config, install or upgrade, or a new site or a new user. In all cases,
-     * check it and save default value first.
-     *
-     * @param SettingsInterface $settings
-     * @param string $settingsType
-     * @param int $id Site id or user id.
-     */
-    protected function initDataToPopulate(SettingsInterface $settings, $settingsType, $id = null)
-    {
-        // This method is not in the interface, but is set for config, site and
-        // user settings.
-        if (!method_exists($settings, 'getTableName')) {
-            return;
-        }
-
-        $config = $this->getConfig();
-        $space = strtolower(static::NAMESPACE);
-        if (empty($config[$space][$settingsType])) {
-            return;
-        }
-
-        /** @var \Doctrine\DBAL\Connection $connection */
-        $connection = $this->getServiceLocator()->get('Omeka\Connection');
-        if ($id) {
-            if (!method_exists($settings, 'getTargetIdColumnName')) {
-                return;
-            }
-            $sql = sprintf('SELECT id, value FROM %s WHERE %s = :target_id', $settings->getTableName(), $settings->getTargetIdColumnName());
-            $stmt = $connection->executeQuery($sql, ['target_id' => $id]);
-        } else {
-            $sql = sprintf('SELECT id, value FROM %s', $settings->getTableName());
-            $stmt = $connection->query($sql);
-        }
-
-        $currentSettings = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
-        $defaultSettings = $config[$space][$settingsType];
-        // Skip settings that are arrays, because the fields "multi-checkbox"
-        // and "multi-select" are removed when no value are selected, so it's
-        // not possible to determine if it's a new setting or an old empty
-        // setting currently. So fill them via upgrade in that case.
-        // TODO Find a way to save empty multi-checkboxes and multi-selects (core fix).
-        $defaultSettings = array_filter($defaultSettings, function ($v) {
-            return !is_array($v);
-        });
-        $missingSettings = array_diff_key($defaultSettings, $currentSettings);
-
-        foreach ($missingSettings as $name => $value) {
-            $settings->set($name, $value);
-        }
     }
 
     /**
