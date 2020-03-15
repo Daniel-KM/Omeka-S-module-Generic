@@ -356,6 +356,8 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
      */
     protected function handleAnySettings(Event $event, $settingsType)
     {
+        global $globalNext;
+
         $services = $this->getServiceLocator();
 
         $settingsTypes = [
@@ -396,6 +398,13 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
                 break;
         }
 
+        // Simplify config of settings.
+        if (empty($globalNext)) {
+            $globalNext = true;
+            $ckEditorHelper = $services->get('ViewHelperManager')->get('ckEditor');
+            $ckEditorHelper();
+        }
+
         // Allow to use a form without an id, for example to create a user.
         if ($settingsType !== 'settings' && !$id) {
             $data = [];
@@ -406,10 +415,6 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
                 return;
             }
         }
-
-        // Simplify config of settings.
-        $ckEditorHelper = $services->get('ViewHelperManager')->get('ckEditor');
-        $ckEditorHelper();
 
         $space = strtolower(static::NAMESPACE);
 
