@@ -382,8 +382,22 @@ class InstallResources
         }
         unset($templateProperty);
 
+        // Check if there are title and description.
+        foreach (['o:title_property', 'o:description_property'] as $property) {
+            if (!empty($data[$property]['vocabulary_namespace_uri'])
+                && !empty($data[$property]['local_name'])
+            ) {
+                $prop = $api->searchOne('properties', $data[$property])->getContent();
+                if ($prop) {
+                    $data[$property]['o:id'] = $prop->id();
+                }
+            }
+        }
+
         // Process import.
+        /** \Omeka\Api\Representation\ResourceTemplateRepresentation $resourceTemplate */
         $resourceTemplate = $api->create('resource_templates', $data)->getContent();
+
         return $resourceTemplate;
     }
 
