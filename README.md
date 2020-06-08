@@ -141,7 +141,7 @@ altered, and that no provisions are either added or removed herefrom.
 Copyright
 ---------
 
-* Copyright Daniel Berthereau, 2018-2019 (see [Daniel-KM] on GitHub)
+* Copyright Daniel Berthereau, 2018-2020 (see [Daniel-KM] on GitHub)
 
 
 [Generic module]: https://github.com/Daniel-KM/Omeka-S-module-Generic
