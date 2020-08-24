@@ -1,6 +1,11 @@
 Generic Module (module for Omeka S)
 ===================================
 
+
+> __New versions of this module and support for Omeka S version 3.0 and above
+> are available on [GitLab], which seems to respect users and privacy better.__
+
+
 [Generic Module] is a module for [Omeka S] that allows to manage all common one
 time tasks (install, config, settings management…) from the config of another
 module, so it avoids the developer to copy-paste common code between modules.
@@ -112,7 +117,7 @@ your archives regularly so you can roll back if needed.
 Troubleshooting
 ---------------
 
-See online issues on the [module issues] page on GitHub.
+See online issues on the [module issues] page on GitLab.
 
 
 License
@@ -141,15 +146,16 @@ altered, and that no provisions are either added or removed herefrom.
 Copyright
 ---------
 
-* Copyright Daniel Berthereau, 2018-2020 (see [Daniel-KM] on GitHub)
+* Copyright Daniel Berthereau, 2018-2020 (see [Daniel-KM] on GitLab)
 
 
-[Generic module]: https://github.com/Daniel-KM/Omeka-S-module-Generic
+[Generic module]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
 [Omeka S]: https://omeka.org/s
-[module issues]: https://github.com/Daniel-KM/Omeka-S-module-Generic/issues
+[GitLab]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
+[module issues]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic/issues
 [CeCILL v2.1]: https://www.cecill.info/licences/Licence_CeCILL_V2.1-en.html
 [GNU/GPL]: https://www.gnu.org/licenses/gpl-3.0.html
 [FSF]: https://www.fsf.org
 [OSI]: http://opensource.org
 [MIT]: http://http://opensource.org/licenses/MIT
-[Daniel-KM]: https://github.com/Daniel-KM "Daniel Berthereau"
+[Daniel-KM]: https://gitlab.com/Daniel-KM "Daniel Berthereau"
