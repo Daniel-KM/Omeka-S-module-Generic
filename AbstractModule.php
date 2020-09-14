@@ -217,7 +217,7 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         $status = $services->get('Omeka\Status');
         if ($status->isAdminRequest()) {
             /** @var \Zend\Router\Http\RouteMatch $routeMatch */
-            $routeMatch = $services->get('Application')->getMvcEvent()->getRouteMatch();
+            $routeMatch = $status->getRouteMatch();
             if (!in_array($routeMatch->getParam('controller'), ['Omeka\Controller\Admin\User', 'user'])) {
                 return;
             }
