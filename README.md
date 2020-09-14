@@ -78,7 +78,7 @@ class Module extends AbstractModule
 
 To install resources, you need to include another file, for example:
 
-```
+```php
     public function install(ServiceLocatorInterface $serviceLocator)
     {
         parent::install($serviceLocator);
@@ -152,7 +152,7 @@ Copyright
 [Generic module]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
 [Omeka S]: https://omeka.org/s
 [GitLab]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
-[module issues]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic/issues
+[module issues]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic/-/issues
 [CeCILL v2.1]: https://www.cecill.info/licences/Licence_CeCILL_V2.1-en.html
 [GNU/GPL]: https://www.gnu.org/licenses/gpl-3.0.html
 [FSF]: https://www.fsf.org
