@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
  * Copyright Daniel Berthereau, 2018-2020
  *
@@ -111,7 +111,7 @@ class InstallResources
      *
      * @param string $module
      */
-    public function createAllResources($module)
+    public function createAllResources($module): void
     {
         $filepathData = OMEKA_PATH . '/modules/' . $module . '/data/';
 
@@ -433,7 +433,7 @@ class InstallResources
      *
      * @param string $filepath
      */
-    public function createCustomVocab($filepath)
+    public function createCustomVocab($filepath): void
     {
         $services = $this->getServiceLocator();
         $api = $services->get('Omeka\ApiManager');
@@ -533,7 +533,7 @@ class InstallResources
      * @param string $filepath
      * @throws \Omeka\Api\Exception\RuntimeException
      */
-    public function updateCustomVocab($filepath)
+    public function updateCustomVocab($filepath): void
     {
         $services = $this->getServiceLocator();
         $api = $services->get('Omeka\ApiManager');
@@ -565,7 +565,7 @@ class InstallResources
      *
      * @param string $prefix
      */
-    public function removeVocabulary($prefix)
+    public function removeVocabulary($prefix): void
     {
         $services = $this->getServiceLocator();
         $api = $services->get('Omeka\ApiManager');
@@ -582,7 +582,7 @@ class InstallResources
      *
      * @param string $label
      */
-    public function removeResourceTemplate($label)
+    public function removeResourceTemplate($label): void
     {
         $services = $this->getServiceLocator();
         $api = $services->get('Omeka\ApiManager');
@@ -599,7 +599,7 @@ class InstallResources
      *
      * @param string $label
      */
-    public function removeCustomVocab($label)
+    public function removeCustomVocab($label): void
     {
         $services = $this->getServiceLocator();
         $api = $services->get('Omeka\ApiManager');
