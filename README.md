@@ -31,7 +31,7 @@ installed or not enabled in the admin modules panel.
 Usage (for developer)
 ---------------------
 
-*** Main Usage
+### Main Usage
 
 This module contains a generic abstract class `AbstractModule`, that extends
 itself the Omeka one, so make your module extends it.
@@ -74,7 +74,7 @@ class Module extends AbstractModule
 }
 ```
 
-*** Installing resources
+### Installing resources
 
 To install resources, you need to include another file, for example:
 
@@ -123,7 +123,7 @@ See online issues on the [module issues] page on GitLab.
 License
 -------
 
-This module is published under the [CeCILL v2.1] licence, compatible with
+This module is published under the [CeCILL v2.1] license, compatible with
 [GNU/GPL] and approved by [FSF] and [OSI].
 
 In consideration of access to the source code and the rights to copy, modify and
