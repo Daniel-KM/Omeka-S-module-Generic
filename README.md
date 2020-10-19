@@ -76,33 +76,9 @@ class Module extends AbstractModule
 
 ### Installing resources
 
-To install resources, you need to include another file, for example:
-
-```php
-    public function install(ServiceLocatorInterface $serviceLocator)
-    {
-        parent::install($serviceLocator);
-
-        $this->setServiceLocator($serviceLocator);
-        $this->installResources();
-    }
-
-    protected function installResources()
-    {
-        require_once dirname(__DIR__) . '/Generic/InstallResources.php';
-
-        $services = $this->getServiceLocator();
-        $installResources = new \Generic\InstallResources($services);
-        $installResources = $installResources();
-
-        // Check and install a resource template.
-        $installResources->createResourceTemplate($filepath);
-        ...
-    }
-```
-
-This second part of the module is still in development to install resources
-automatically.
+To install resources, you need to include the file `InstallResources.php`. The
+files that contains vocabs, custom vocabs, and templates inside `data/` will be
+automatically imported.
 
 
 Warning
