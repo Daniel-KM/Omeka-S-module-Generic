@@ -31,6 +31,7 @@ namespace Generic;
 use Laminas\ServiceManager\ServiceLocatorInterface;
 use Omeka\Api\Exception\NotFoundException;
 use Omeka\Api\Exception\RuntimeException;
+use Omeka\Api\Representation\ResourceTemplateRepresentation;
 use Omeka\Module\Exception\ModuleCannotInstallException;
 use Omeka\Mvc\Controller\Plugin\Messenger;
 use Omeka\Stdlib\Message;
@@ -368,43 +369,10 @@ class InstallResources
         } catch (NotFoundException $e) {
         }
 
-        // Set the iinternal ids of classes, properties and data types.
-        // TODO Check if the output is valid (else an error will be thrown during import).
+        // The check sets the internal ids of classes, properties and data types
+        // and converts old data types into multiple data types and prepare
+        // other data types (mainly custom vocabs).
         $data = $this->flagValid($data);
-
-        // Manage the custom vocabs that may be set inside the template.
-        foreach ($data['o:resource_template_property'] as &$templateProperty) {
-            if (strpos((string) $templateProperty['data_type_name'], 'customvocab:') !== 0) {
-                continue;
-            }
-            $label = $templateProperty['data_type_label'] ?: $templateProperty['label'];
-            try {
-                $customVocab = $this->api->read('custom_vocabs', ['label' => $label])->getContent();
-            } catch (NotFoundException $e) {
-                throw new RuntimeException(
-                    new Message(
-                        'The custom vocab named "%s" is not available.', // @translate
-                        $label
-                    )
-                );
-            }
-            $templateProperty['data_type_name'] = 'customvocab:' . $customVocab->id();
-            $templateProperty['o:data_type'] = 'customvocab:' . $customVocab->id();
-        }
-        unset($templateProperty);
-
-        // Check if there are title and description.
-        foreach (['o:title_property', 'o:description_property'] as $property) {
-            if (!empty($data[$property]['vocabulary_namespace_uri'])
-                && !empty($data[$property]['local_name'])
-            ) {
-                $prop = $this->api->search('properties', $data[$property])->getContent();
-                if (count($prop)) {
-                    $prop = reset($prop);
-                    $data[$property]['o:id'] = $prop->id();
-                }
-            }
-        }
 
         // Process import.
         return $this->api->create('resource_templates', $data)->getContent();
@@ -436,7 +404,7 @@ class InstallResources
         $data = json_decode(file_get_contents($filepath), true);
         $data['o:terms'] = implode(PHP_EOL, $data['o:terms']);
         try {
-            return $this->api->create('custom_vocabs', $data);
+            return $this->api->create('custom_vocabs', $data)->getContent();
         } catch (\Exception $e) {
             return null;
         }
@@ -445,9 +413,10 @@ class InstallResources
     /**
      * Flag members and data types as valid.
      *
-     * Copy of the method of the resource template controller (with services).
+     * Copy of the method of the resource template controller (with services)
+     * and remove of keys "data_types" inside "o:data".
      *
-     * @see \Omeka\Controller\Admin\ResourceTemplateController::flagValid()
+     * @see \AdvancedResourceTemplate\Controller\Admin\ResourceTemplateControllerDelegator::flagValid()
      *
      * All members start as invalid until we determine whether the corresponding
      * vocabulary and member exists in this installation. All data types start
@@ -460,45 +429,105 @@ class InstallResources
      * the property. By design, the API will only hydrate members and data types
      * that are flagged as valid.
      *
+     * @todo Manage direct import of data types from Value Suggest and other modules.
+     *
      * @param array $import
      * @return array|false
      */
     protected function flagValid(iterable $import)
     {
         $vocabs = [];
-        $dataTypes = [
-            'literal',
-            'uri',
-            'resource',
-            'resource:item',
-            'resource:itemset',
-            'resource:media',
-        ];
 
-        $getVocab = function ($namespaceUri) use (&$vocabs) {
+        // The controller plugin Api is used to allow to search one resource.
+        $api = $this->services->get('ControllerPluginManager')->get('api');
+
+        $getVocab = function ($namespaceUri) use (&$vocabs, $api) {
             if (isset($vocabs[$namespaceUri])) {
                 return $vocabs[$namespaceUri];
             }
-            $vocab = $this->api->search('vocabularies', ['namespace_uri' => $namespaceUri, 'limit' => 1])->getContent();
-            if (count($vocab)) {
-                $vocab = reset($vocab);
+            $vocab = $api->searchOne('vocabularies', [
+                'namespace_uri' => $namespaceUri,
+            ])->getContent();
+            if ($vocab) {
                 $vocabs[$namespaceUri] = $vocab;
                 return $vocab;
             }
             return false;
         };
 
-        if (!empty($import['o:resource_class'])) {
+        $getDataTypesByName = function ($dataTypesNameLabels) {
+            $result = [];
+            foreach ($dataTypesNameLabels as $dataType) {
+                $result[$dataType['name']] = $dataType;
+            }
+            return $result;
+        };
+
+        // Manage core data types and common modules ones.
+        $getKnownDataType = function ($dataTypeNameLabel) use ($api): ?string {
+            if (in_array($dataTypeNameLabel['name'], [
+                'literal',
+                'resource',
+                'resource:item',
+                'resource:itemset',
+                'resource:media',
+                'uri',
+                // DataTypeGeometry
+                'geometry:geography',
+                'geometry:geometry',
+                // DataTypeRdf.
+                'boolean',
+                'html',
+                'xml',
+                // DataTypePlace.
+                'place',
+                // NumericDataTypes
+                'numeric:timestamp',
+                'numeric:integer',
+                'numeric:duration',
+                'numeric:interval',
+            ])
+                || mb_substr((string) $dataTypeNameLabel['name'], 0, 13) === 'valuesuggest:'
+                || mb_substr((string) $dataTypeNameLabel['name'], 0, 16) === 'valuesuggestall:'
+            ) {
+                return $dataTypeNameLabel['name'];
+            }
+
+            if (mb_substr((string) $dataTypeNameLabel['name'], 0, 12) === 'customvocab:') {
+                try {
+                    $customVocab = $api->read('custom_vocabs', ['label' => $dataTypeNameLabel['label']])->getContent();
+                    return 'customvocab:' . $customVocab->id();
+                } catch (\Omeka\Api\Exception\NotFoundException $e) {
+                    return null;
+                }
+            }
+            return null;
+        };
+
+        if (isset($import['o:resource_class'])) {
             if ($vocab = $getVocab($import['o:resource_class']['vocabulary_namespace_uri'])) {
                 $import['o:resource_class']['vocabulary_prefix'] = $vocab->prefix();
-                $class = $this->api->search('resource_classes', [
+                $class = $api->searchOne('resource_classes', [
                     'vocabulary_namespace_uri' => $import['o:resource_class']['vocabulary_namespace_uri'],
                     'local_name' => $import['o:resource_class']['local_name'],
-                    'limit' => 1,
                 ])->getContent();
                 if ($class) {
-                    $class = reset($class);
                     $import['o:resource_class']['o:id'] = $class->id();
+                }
+            }
+        }
+
+        foreach (['o:title_property', 'o:description_property'] as $property) {
+            if (isset($import[$property])) {
+                if ($vocab = $getVocab($import[$property]['vocabulary_namespace_uri'])) {
+                    $import[$property]['vocabulary_prefix'] = $vocab->prefix();
+                    $prop = $api->searchOne('properties', [
+                        'vocabulary_namespace_uri' => $import[$property]['vocabulary_namespace_uri'],
+                        'local_name' => $import[$property]['local_name'],
+                    ])->getContent();
+                    if ($prop) {
+                        $import[$property]['o:id'] = $prop->id();
+                    }
                 }
             }
         }
@@ -506,16 +535,68 @@ class InstallResources
         foreach ($import['o:resource_template_property'] as $key => $property) {
             if ($vocab = $getVocab($property['vocabulary_namespace_uri'])) {
                 $import['o:resource_template_property'][$key]['vocabulary_prefix'] = $vocab->prefix();
-                $prop = $this->api->search('properties', [
+                $prop = $api->searchOne('properties', [
                     'vocabulary_namespace_uri' => $property['vocabulary_namespace_uri'],
                     'local_name' => $property['local_name'],
-                    'limit' => 1,
                 ])->getContent();
                 if ($prop) {
-                    $prop = reset($prop);
                     $import['o:resource_template_property'][$key]['o:property'] = ['o:id' => $prop->id()];
-                    if (in_array($import['o:resource_template_property'][$key]['data_type_name'], $dataTypes)) {
-                        $import['o:resource_template_property'][$key]['o:data_type'] = $import['o:resource_template_property'][$key]['data_type_name'];
+                    // Check the deprecated "data_type_name" if needed and
+                    // normalize it.
+                    if (!array_key_exists('data_types', $import['o:resource_template_property'][$key])) {
+                        if (!empty($import['o:resource_template_property'][$key]['data_type_name'])
+                            && !empty($import['o:resource_template_property'][$key]['data_type_label'])
+                        ) {
+                            $import['o:resource_template_property'][$key]['data_types'] = [[
+                                'name' => $import['o:resource_template_property'][$key]['data_type_name'],
+                                'label' => $import['o:resource_template_property'][$key]['data_type_label'],
+                            ]];
+                        } else {
+                            $import['o:resource_template_property'][$key]['data_types'] = [];
+                        }
+                    }
+                    unset($import['o:resource_template_property'][$key]['data_type_name']);
+                    unset($import['o:resource_template_property'][$key]['data_type_label']);
+                    $import['o:resource_template_property'][$key]['data_types'] = $getDataTypesByName($import['o:resource_template_property'][$key]['data_types']);
+                    // Prepare the list of standard data types.
+                    $import['o:resource_template_property'][$key]['o:data_type'] = [];
+                    foreach ($import['o:resource_template_property'][$key]['data_types'] as $name => $dataTypeNameLabel) {
+                        $known = $getKnownDataType($dataTypeNameLabel);
+                        if ($known) {
+                            $import['o:resource_template_property'][$key]['o:data_type'][] = $known;
+                            $import['o:resource_template_property'][$key]['data_types'][$name]['name'] = $known;
+                        }
+                    }
+                    $import['o:resource_template_property'][$key]['o:data_type'] = array_unique($import['o:resource_template_property'][$key]['o:data_type']);
+                    // Prepare the list of standard data types for duplicated
+                    // properties (only one most of the time, that is the main).
+                    $import['o:resource_template_property'][$key]['o:data'] = array_values($import['o:resource_template_property'][$key]['o:data']);
+                    $import['o:resource_template_property'][$key]['o:data'][0]['data_types'] = $import['o:resource_template_property'][$key]['data_types'];
+                    $import['o:resource_template_property'][$key]['o:data'][0]['o:data_type'] = $import['o:resource_template_property'][$key]['o:data_type'];
+                    $first = true;
+                    foreach ($import['o:resource_template_property'][$key]['o:data'] as $k => $rtpData) {
+                        if ($first) {
+                            $first = false;
+                            // Specific to the installer.
+                            unset($import['o:resource_template_property'][$key]['o:data'][$k]['data_types']);
+                            continue;
+                        }
+                        // Prepare the list of standard data types if any.
+                        $import['o:resource_template_property'][$key]['o:data'][$k]['o:data_type'] = [];
+                        if (empty($rtpData['data_types'])) {
+                            continue;
+                        }
+                        $import['o:resource_template_property'][$key]['o:data'][$k]['data_types'] = $getDataTypesByName($import['o:resource_template_property'][$key]['o:data'][$k]['data_types']);
+                        foreach ($import['o:resource_template_property'][$key]['o:data'][$k]['data_types'] as $name => $dataTypeNameLabel) {
+                            $known = $getKnownDataType($dataTypeNameLabel);
+                            if ($known) {
+                                $import['o:resource_template_property'][$key]['o:data'][$k]['o:data_type'][] = $known;
+                                $import['o:resource_template_property'][$key]['o:data'][$k]['data_types'][$name]['name'] = $known;
+                            }
+                        }
+                        $import['o:resource_template_property'][$key]['o:data'][$k]['o:data_type'] = array_unique($import['o:resource_template_property'][$key]['o:data'][$k]['o:data_type']);
+                        // Specific to the installer.
+                        unset($import['o:resource_template_property'][$key]['o:data'][$k]['data_types']);
                     }
                 }
             }
