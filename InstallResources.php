@@ -81,9 +81,7 @@ class InstallResources
             $data = file_get_contents($filepath);
             $data = json_decode($data, true);
             if ($data) {
-                if ($data['file'] && strpos((string) $data['file'], 'https://') === false && strpos((string) $data['file'], 'http://') === false) {
-                    $data['file'] = dirname($filepath) . '/' . $data['file'];
-                }
+                $data['file'] = $this->canonicalFileOrUrl($data['file'], $module, 'vocabularies', $filepath);
                 try {
                     $this->checkVocabulary($data);
                 } catch (RuntimeException $e) {
@@ -135,9 +133,7 @@ class InstallResources
             $data = file_get_contents($filepath);
             $data = json_decode($data, true);
             if ($data) {
-                if ($data['file'] && strpos((string) $data['file'], 'https://') === false && strpos((string) $data['file'], 'http://') === false) {
-                    $data['file'] = dirname($filepath) . '/' . $data['file'];
-                }
+                $data['file'] = $this->canonicalFileOrUrl($data['file'], $module, 'vocabularies', $filepath);
                 if (!$this->checkVocabulary($data)) {
                     $this->createVocabulary($data);
                 }
@@ -170,12 +166,12 @@ class InstallResources
      */
     public function checkVocabulary(array $vocabulary): bool
     {
-        $filepath = $vocabulary['file'];
-        if (!file_exists($filepath) || !filesize($filepath) || !is_readable($filepath)) {
+        $filepath = (string) $vocabulary['file'];
+        if (!$filepath || !file_exists($filepath) || !filesize($filepath) || !is_readable($filepath)) {
             throw new RuntimeException(
                 sprintf(
                     'The file "%s" cannot be read. Check your file system or the url.', // @translate
-                    strpos($filepath, '/') === 0 ? basename($vocabulary['file']) : $filepath
+                    strpos($filepath, '/') === 0 ? basename($filepath) : $filepath
                 )
             );
         }
@@ -203,6 +199,37 @@ class InstallResources
                 $vocabulary['vocabulary']['o:prefix']
             )
         );
+    }
+
+    protected function canonicalFileOrUrl($file, string $module, string $dataDirectory, string $mainFilepath): ?string
+    {
+        if (!$file) {
+            return null;
+        }
+
+        if (strpos((string) $file, 'https://') !== false || strpos((string) $file, 'http://') !== false) {
+            return $file;
+        }
+
+        $filepathData = OMEKA_PATH . '/modules/' . $module . '/data/';
+        $filepath = $filepathData . ($dataDirectory ? $dataDirectory . '/' : '') . $file;
+        if (file_exists($filepath)) {
+            return $filepath;
+        }
+
+        // For compatibility with old modules.
+
+        $filepath = dirname($mainFilepath) . '/' . $file;
+        if (file_exists($filepath)) {
+            return $filepath;
+        }
+
+        $filepath = OMEKA_PATH . '/modules/' . $module . '/' . $file;
+        if (file_exists($filepath)) {
+            return $filepath;
+        }
+
+        return null;
     }
 
     /**
