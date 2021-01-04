@@ -249,9 +249,6 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         }
     }
 
-    /**
-     * @return string
-     */
     protected function modulePath(): string
     {
         return OMEKA_PATH . '/modules/' . static::NAMESPACE;

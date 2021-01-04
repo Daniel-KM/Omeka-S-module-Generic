@@ -80,7 +80,7 @@ class InstallResources
             $data = file_get_contents($filepath);
             $data = json_decode($data, true);
             if ($data) {
-                if ($data['file'] && strpos($data['file'], 'https://') === false && strpos($data['file'], 'http://') === false) {
+                if ($data['file'] && strpos((string) $data['file'], 'https://') === false && strpos((string) $data['file'], 'http://') === false) {
                     $data['file'] = dirname($filepath) . '/' . $data['file'];
                 }
                 try {
@@ -134,7 +134,7 @@ class InstallResources
             $data = file_get_contents($filepath);
             $data = json_decode($data, true);
             if ($data) {
-                if ($data['file'] && strpos($data['file'], 'https://') === false && strpos($data['file'], 'http://') === false) {
+                if ($data['file'] && strpos((string) $data['file'], 'https://') === false && strpos((string) $data['file'], 'http://') === false) {
                     $data['file'] = dirname($filepath) . '/' . $data['file'];
                 }
                 if (!$this->checkVocabulary($data)) {
@@ -310,7 +310,7 @@ class InstallResources
 
             // It is another vocabulary with the same prefix.
             throw new RuntimeException(
-                new Message(
+                (string) new Message(
                     'An error occured when adding the prefix "%s": another vocabulary exists with the same prefix. Resolve the conflict before installing this module.', // @translate
                     $vocabulary['vocabulary']['o:prefix']
                 )
@@ -330,7 +330,7 @@ class InstallResources
             );
         } catch (\Omeka\Api\Exception\ValidationException $e) {
             throw new RuntimeException(
-                new Message(
+                (string) new Message(
                     'An error occured when adding the prefix "%s" and the associated properties: %s', // @translate
                     $vocabulary['vocabulary']['o:prefix'],
                     $e->getMessage()
@@ -374,7 +374,7 @@ class InstallResources
 
         // Manage the custom vocabs that may be set inside the template.
         foreach ($data['o:resource_template_property'] as &$templateProperty) {
-            if (strpos($templateProperty['data_type_name'], 'customvocab:') !== 0) {
+            if (strpos((string) $templateProperty['data_type_name'], 'customvocab:') !== 0) {
                 continue;
             }
             $label = $templateProperty['data_type_label'] ?: $templateProperty['label'];
@@ -540,7 +540,7 @@ class InstallResources
             $customVocab = $this->api->read('custom_vocabs', ['label' => $label])->getContent();
         } catch (NotFoundException $e) {
             throw new RuntimeException(
-                new Message(
+                (string) new Message(
                     'The custom vocab named "%s" is not available.', // @translate
                     $label
                 )
