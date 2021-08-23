@@ -315,14 +315,18 @@ class InstallResources
     public function createVocabulary(array $vocabulary): bool
     {
         // Check if the vocabulary have been already imported.
-        $prefix = $vocabulary['vocabulary']['o:prefix'];
-
-        try {
-            /** @var \Omeka\Api\Representation\VocabularyRepresentation $vocabularyRepresentation */
-            $vocabularyRepresentation = $this->api->read('vocabularies', ['prefix' => $prefix])->getContent();
-        } catch (NotFoundException $e) {
-            $vocabularyRepresentation = null;
+        $prefix = $vocabulary['vocabulary']['o:prefix'] ?? '';
+        if (!$prefix) {
+            throw new RuntimeException(
+                (string) new Message(
+                    'A prefix is required to create a vocabulary.', // @translate
+                    $prefix
+                )
+            );
         }
+
+        /** @var \Omeka\Api\Representation\VocabularyRepresentation $vocabularyRepresentation */
+        $vocabularyRepresentation = $this->api->searchOne('vocabularies', ['prefix' => $prefix])->getContent();
 
         if ($vocabularyRepresentation) {
             // Check if it is the same vocabulary.
@@ -341,7 +345,7 @@ class InstallResources
             throw new RuntimeException(
                 (string) new Message(
                     'An error occured when adding the prefix "%s": another vocabulary exists with the same prefix. Resolve the conflict before installing this module.', // @translate
-                    $vocabulary['vocabulary']['o:prefix']
+                    $prefix
                 )
             );
         }
@@ -384,9 +388,9 @@ class InstallResources
         $data = json_decode(file_get_contents($filepath), true);
 
         // Check if the resource template exists, so it is not replaced.
-        $label = $data['o:label'];
+        $label = $data['o:label'] ?? '';
         try {
-            $resourceTemplate = $this->api->read('resource_templates', ['label' => $label])->getContent();
+            $resourceTemplate = $this->api->searchOne('resource_templates', ['label' => $label])->getContent();
             $message = new Message(
                 'The resource template named "%s" is already available and is skipped.', // @translate
                 $label
@@ -675,10 +679,9 @@ class InstallResources
     public function removeVocabulary(string $prefix): self
     {
         // The vocabulary may have been removed manually before.
-        try {
-            $resource = $this->api->read('vocabularies', ['prefix' => $prefix])->getContent();
+        $resource = $this->api->searchOne('vocabularies', ['prefix' => $prefix])->getContent();
+        if ($resource) {
             $this->api->delete('vocabularies', $resource->id());
-        } catch (NotFoundException $e) {
         }
         return $this;
     }
@@ -692,10 +695,9 @@ class InstallResources
     public function removeResourceTemplate(string $label): self
     {
         // The resource template may be renamed or removed manually before.
-        try {
-            $resource = $this->api->read('resource_templates', ['label' => $label])->getContent();
+        $resource = $this->api->read('resource_templates', ['label' => $label])->getContent();
+        if ($resource) {
             $this->api->delete('resource_templates', $resource->id());
-        } catch (NotFoundException $e) {
         }
         return $this;
     }
