@@ -641,6 +641,25 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
     }
 
     /**
+     * Check the version of a module.
+     */
+    protected function isModuleVersionAtLeast(string $module, string $version): bool
+    {
+        $services = $this->getServiceLocator();
+        /** @var \Omeka\Module\Manager $moduleManager */
+        $moduleManager = $services->get('Omeka\ModuleManager');
+        $module = $moduleManager->getModule($module);
+        if (!$module) {
+            return false;
+        }
+
+        $moduleVersion = $module->getIni('version');
+        return $moduleVersion
+            ? version_compare($moduleVersion, $version, '>=')
+            : false;
+    }
+
+    /**
      * Check if a module is active.
      *
      * @param string $module
