@@ -79,21 +79,18 @@ class InstallResources
         foreach ($this->listFilesInDir($filepathData . 'vocabularies', ['json']) as $filepath) {
             $data = file_get_contents($filepath);
             $data = json_decode($data, true);
-            if (!$data) {
+            if (!is_array($data)) {
                 throw new ModuleCannotInstallException((string) new Message(
                     'An error occured when loading vocabulary "%s": file has no json content.', // @translate
                     pathinfo($filepath, PATHINFO_FILENAME)
                 ));
             }
-            if ($data) {
-                $data['file'] = $this->canonicalFileOrUrl($data['file'] ?? '', $module, 'vocabularies', $filepath);
-                $exists = $this->checkVocabulary($data);
-                if (is_null($exists)) {
-                    throw new ModuleCannotInstallException((string) new Message(
-                        'An error occured when adding the prefix "%s": another vocabulary exists. Resolve the conflict before installing this module.', // @translate
-                        $data['vocabulary']['o:prefix']
-                    ));
-                }
+            $exists = $this->checkVocabulary($data, $module);
+            if (is_null($exists)) {
+                throw new ModuleCannotInstallException((string) new Message(
+                    'An error occured when adding the prefix "%s": another vocabulary exists. Resolve the conflict before installing this module.', // @translate
+                    $data['vocabulary']['o:prefix']
+                ));
             }
         }
 
@@ -113,7 +110,7 @@ class InstallResources
         foreach ($this->listFilesInDir($filepathData . 'resource-templates') as $filepath) {
             $exists = $this->checkResourceTemplate($filepath);
             if (is_null($exists)) {
-                throw new ModuleCannotInstallException(new Message(
+                throw new ModuleCannotInstallException((string) new Message(
                     'A resource template exists for %s. Rename it or remove it before installing this module.', // @translate
                     pathinfo($filepath, PATHINFO_FILENAME)
                 ));
@@ -136,11 +133,8 @@ class InstallResources
         foreach ($this->listFilesInDir($filepathData . 'vocabularies', ['json']) as $filepath) {
             $data = file_get_contents($filepath);
             $data = json_decode($data, true);
-            if ($data) {
-                $data['file'] = $this->canonicalFileOrUrl($data['file'], $module, 'vocabularies', $filepath);
-                if (!$this->checkVocabulary($data)) {
-                    $this->createVocabulary($data);
-                }
+            if (is_array($data)) {
+                $this->createOrUpdateVocabulary($data, $module);
             }
         }
 
@@ -164,24 +158,23 @@ class InstallResources
     /**
      * Check if a vocabulary exists and throws an exception if different.
      *
-     * @param array $vocabulary
      * @throws \Omeka\Api\Exception\RuntimeException
      * @return bool False if not found, true if exists, null if a vocabulary
      * exists with the same prefix but a different uri.
      */
-    public function checkVocabulary(array $vocabulary): ?bool
+    public function checkVocabulary(array $vocabularyData, ?string $module = null): ?bool
     {
-        $filepath = (string) $vocabulary['file'];
-        if (!$filepath || !file_exists($filepath) || !filesize($filepath) || !is_readable($filepath)) {
-            throw new RuntimeException(
-                sprintf(
-                    'The file "%s" cannot be read. Check your file system or the url.', // @translate
-                    strpos($filepath, '/') === 0 ? basename($filepath) : $filepath
-                )
-            );
+        $vocabularyData = $this->prepareVocabularyData($vocabularyData, $module);
+
+        if (!empty($vocabularyData['old_namespace_uri'])) {
+            /** @var \Omeka\Api\Representation\VocabularyRepresentation $vocabularyRepresentation */
+            $vocabularyRepresentation = $this->api->searchOne('vocabularies', ['namespace_uri' => $vocabularyData['old_namespace_uri']])->getContent();
+            if ($vocabularyRepresentation) {
+                return true;
+            }
         }
 
-        $namespaceUri = $vocabulary['vocabulary']['o:namespace_uri'] ?? 'no_namespace_uri';
+        $namespaceUri = $vocabularyData['vocabulary']['o:namespace_uri'];
         /** @var \Omeka\Api\Representation\VocabularyRepresentation $vocabularyRepresentation */
         $vocabularyRepresentation = $this->api->searchOne('vocabularies', ['namespace_uri' => $namespaceUri])->getContent();
         if ($vocabularyRepresentation) {
@@ -189,7 +182,7 @@ class InstallResources
         }
 
         // Check if the vocabulary have been already imported.
-        $prefix = $vocabulary['vocabulary']['o:prefix'] ?? 'no_vocabulary';
+        $prefix = $vocabularyData['vocabulary']['o:prefix'];
         $vocabularyRepresentation = $this->api->searchOne('vocabularies', ['prefix' => $prefix])->getContent();
         if (!$vocabularyRepresentation) {
             return false;
@@ -202,37 +195,6 @@ class InstallResources
         }
 
         // It is another vocabulary with the same prefix.
-        return null;
-    }
-
-    protected function canonicalFileOrUrl($file, string $module, string $dataDirectory, string $mainFilepath): ?string
-    {
-        if (!$file) {
-            return null;
-        }
-
-        if (strpos((string) $file, 'https://') !== false || strpos((string) $file, 'http://') !== false) {
-            return $file;
-        }
-
-        $filepathData = OMEKA_PATH . '/modules/' . $module . '/data/';
-        $filepath = $filepathData . ($dataDirectory ? $dataDirectory . '/' : '') . $file;
-        if (file_exists($filepath)) {
-            return $filepath;
-        }
-
-        // For compatibility with old modules.
-
-        $filepath = dirname($mainFilepath) . '/' . $file;
-        if (file_exists($filepath)) {
-            return $filepath;
-        }
-
-        $filepath = OMEKA_PATH . '/modules/' . $module . '/' . $file;
-        if (file_exists($filepath)) {
-            return $filepath;
-        }
-
         return null;
     }
 
@@ -298,26 +260,37 @@ class InstallResources
     }
 
     /**
+     * Create or update a vocabulary, with a check of its existence before.
+     *
+     * The file should have the full path if module is not set.
+     *
+     * @throws \Omeka\Api\Exception\RuntimeException
+     */
+    public function createOrUpdateVocabulary(
+        array $vocabularyData,
+        ?string $module = null
+    ): bool {
+        $vocabularyData = $this->prepareVocabularyData($vocabularyData, $module);
+        $exists = $this->checkVocabulary($vocabularyData, $module);
+        if ($exists === false) {
+            return $this->createVocabulary($vocabularyData, $module);
+        }
+        return $this->updateVocabulary($vocabularyData, $module);
+    }
+
+    /**
      * Create a vocabulary, with a check of its existence before.
      *
-     * @param array $vocabulary
      * @throws \Omeka\Api\Exception\RuntimeException
      * @return bool True if the vocabulary has been created, false if it exists
      * already, so it is not created twice.
      */
-    public function createVocabulary(array $vocabulary): bool
+    public function createVocabulary(array $vocabularyData, ?string $module = null): bool
     {
-        // Check if the vocabulary have been already imported.
-        $prefix = $vocabulary['vocabulary']['o:prefix'] ?? '';
-        if (!$prefix) {
-            throw new RuntimeException(
-                (string) new Message(
-                    'A prefix is required to create a vocabulary.', // @translate
-                    $prefix
-                )
-            );
-        }
+        $vocabularyData = $this->prepareVocabularyData($vocabularyData, $module);
 
+        // Check if the vocabulary have been already imported.
+        $prefix = $vocabularyData['vocabulary']['o:prefix'];
         /** @var \Omeka\Api\Representation\VocabularyRepresentation $vocabularyRepresentation */
         $vocabularyRepresentation = $this->api->searchOne('vocabularies', ['prefix' => $prefix])->getContent();
 
@@ -326,43 +299,101 @@ class InstallResources
             // Note: in some cases, the uri of the ontology and the uri of the
             // namespace are mixed. So, the last character ("#" or "/") is
             // skipped for easier management.
-            if (rtrim($vocabularyRepresentation->namespaceUri(), '#/') === rtrim($vocabulary['vocabulary']['o:namespace_uri'], '#/')) {
+            if (rtrim($vocabularyRepresentation->namespaceUri(), '#/') === rtrim($vocabularyData['vocabulary']['o:namespace_uri'], '#/')) {
                 $message = new Message('The vocabulary "%s" was already installed and was kept.', // @translate
-                    $vocabulary['vocabulary']['o:label']);
+                    $vocabularyData['vocabulary']['o:label']);
                 $messenger = new Messenger();
                 $messenger->addWarning($message);
                 return false;
             }
 
             // It is another vocabulary with the same prefix.
-            throw new RuntimeException(
-                (string) new Message(
-                    'An error occured when adding the prefix "%s": another vocabulary exists with the same prefix. Resolve the conflict before installing this module.', // @translate
-                    $prefix
-                )
-            );
+            throw new RuntimeException((string) new Message(
+                'An error occured when adding the prefix "%s": another vocabulary exists with the same prefix. Resolve the conflict before installing this module.', // @translate
+                $prefix
+            ));
         }
 
         /** @var \Omeka\Stdlib\RdfImporter $rdfImporter */
         $rdfImporter = $this->services->get('Omeka\RdfImporter');
+
         try {
-            $rdfImporter->import(
-                $vocabulary['strategy'],
-                $vocabulary['vocabulary'],
-                [
-                    'file' => $vocabulary['file'],
-                    'format' => $vocabulary['format'],
-                ]
-            );
+            $rdfImporter->import($vocabularyData['strategy'], $vocabularyData['vocabulary'], $vocabularyData['options']);
         } catch (\Omeka\Api\Exception\ValidationException $e) {
-            throw new RuntimeException(
-                (string) new Message(
-                    'An error occured when adding the prefix "%s" and the associated properties: %s', // @translate
-                    $vocabulary['vocabulary']['o:prefix'],
-                    $e->getMessage()
-                )
-            );
+            throw new RuntimeException((string) new Message(
+                'An error occured when adding the prefix "%s" and the associated properties: %s', // @translate
+                $prefix,
+                $e->getMessage()
+            ));
         }
+
+        return true;
+    }
+
+    public function updateVocabulary(
+        array $vocabularyData,
+        ?string $module = null
+    ): bool {
+        $vocabularyData = $this->prepareVocabularyData($vocabularyData, $module);
+
+        $prefix = $vocabularyData['vocabulary']['o:prefix'];
+        $namespaceUri = $vocabularyData['vocabulary']['o:namespace_uri'];
+        $oldNameSpaceUri = $vocabularyData['old_namespace_uri'] ?? null;
+
+        /** @var \Omeka\Entity\Vocabulary $vocabulary */
+        if ($oldNameSpaceUri) {
+            $vocabulary = $this->api->searchOne('vocabularies', ['namespace_uri' => $oldNameSpaceUri], ['responseContent' => 'resource'])->getContent();
+        }
+        // The old vocabulary may have been already updated.
+        if (empty($vocabulary)) {
+            $vocabulary = $this->api->searchOne('vocabularies', ['namespace_uri' => $namespaceUri], ['responseContent' => 'resource'])->getContent()
+                ?: $this->api->searchOne('vocabularies', ['prefix' => $prefix], ['responseContent' => 'resource'])->getContent();
+        }
+        if (!$vocabulary) {
+            return $this->createVocabulary($vocabularyData, $module);
+        }
+
+        // Omeka entities are not fluid.
+        $vocabulary->setNamespaceUri($namespaceUri);
+        $vocabulary->setPrefix($prefix);
+        $vocabulary->setLabel($vocabularyData['vocabulary']['o:label']);
+        $vocabulary->setComment($vocabularyData['vocabulary']['o:comment']);
+
+        $entityManager = $this->services->get('Omeka\EntityManager');
+        $entityManager->persist($vocabulary);
+        $entityManager->flush();
+
+        // Upgrade the properties.
+        /** @var \Omeka\Stdlib\RdfImporter $rdfImporter */
+        $rdfImporter = $this->services->get('Omeka\RdfImporter');
+
+        try {
+            $diff = $rdfImporter->getDiff($vocabularyData['strategy'], $vocabulary->getNamespaceUri(), $vocabularyData['options']);
+        } catch (\Omeka\Api\Exception\ValidationException $e) {
+            throw new ModuleCannotInstallException((string) new Message(
+                'An error occured when updating vocabulary "%s" and the associated properties: %s', // @translate
+                $vocabularyData['vocabulary']['o:prefix'],
+                $e->getMessage()
+            ));
+        }
+
+        try {
+            $diff = $rdfImporter->update($vocabulary->getId(), $diff);
+        } catch (\Omeka\Api\Exception\ValidationException $e) {
+            throw new ModuleCannotInstallException((string) new Message(
+                'An error occured when updating vocabulary "%s" and the associated properties: %s', // @translate
+                $vocabularyData['vocabulary']['o:prefix'],
+                $e->getMessage()
+            ));
+        }
+
+        /** @var \Omeka\Entity\Property[] $properties */
+        $owner = $vocabulary->getOwner();
+        $properties = $this->api->search('properties', ['vocabulary_id' => $vocabulary->getId()], ['responseContent' => 'resource'])->getContent();
+        foreach ($properties as $property) {
+            $property->setOwner($owner);
+        }
+        $entityManager->flush();
 
         return true;
     }
@@ -710,6 +741,96 @@ class InstallResources
         } catch (NotFoundException $e) {
         }
         return $this;
+    }
+
+    /**
+     * Get the full file path inside the data directory. The path may be an url.
+     */
+    public function fileDataPath(string $fileOrUrl, ?string $module = null, ?string $dataDirectory = null): ?string
+    {
+        if (!$fileOrUrl) {
+            return null;
+        }
+
+        $fileOrUrl = trim($fileOrUrl);
+        if (strpos($fileOrUrl, 'https://') !== false || strpos($fileOrUrl, 'http://') !== false) {
+            return $fileOrUrl;
+        }
+
+        // Check if this is already the full path.
+        $modulesPath = OMEKA_PATH . '/modules/';
+        if (strpos($fileOrUrl, $modulesPath) === 0) {
+            $filepath = $fileOrUrl;
+        } elseif (!$module) {
+            return null;
+        } else {
+            $filepath = $modulesPath . $module . '/data/' . ($dataDirectory ? $dataDirectory . '/' : '') . $fileOrUrl;
+        }
+
+        if (file_exists($filepath) && filesize($filepath) && is_readable($filepath)) {
+            return $filepath;
+        }
+
+        return null;
+    }
+
+    protected function prepareVocabularyData(array $vocabularyData, ?string $module = null): array
+    {
+        if (!empty($vocabularyData['is_checked'])) {
+            return $vocabularyData;
+        }
+
+        $filepath = $vocabularyData['options']['file'] ?? $vocabularyData['options']['url']
+            ?? $vocabularyData['file'] ?? $vocabularyData['url'] ?? null;
+        if (!$filepath) {
+            throw new RuntimeException((string) new Message(
+                'No file or url set for the vocabulary.' // @translate
+            ));
+        }
+
+        $filepath = trim($filepath);
+        $isUrl = strpos($filepath, 'http:/') === 0 || strpos($filepath, 'https:/') === 0;
+        if ($isUrl) {
+            $fileContent = file_get_contents($filepath);
+            if (empty($fileContent)) {
+                throw new RuntimeException((string) new Message(
+                    'The file "%s" cannot be read. Check the url.', // @translate
+                    strpos($filepath, '/') === 0 ? basename($filepath) : $filepath
+                ));
+            }
+            $vocabularyData['strategy'] = 'url';
+            $vocabularyData['options']['url'] = $filepath;
+        } else {
+            $filepath = $this->fileDataPath($filepath, $module, 'vocabularies');
+            if (!$filepath) {
+                throw new RuntimeException((string) new Message(
+                    'The file "%s" cannot be read. Check the file.', // @translate
+                    strpos($filepath, '/') === 0 ? basename($filepath) : $filepath
+                ));
+            }
+            $vocabularyData['strategy'] = 'file';
+            $vocabularyData['options']['file'] = $filepath;
+        }
+
+        if (isset($vocabularyData['format'])) {
+            $vocabularyData['options']['format'] = $vocabularyData['format'];
+        }
+        unset(
+            $vocabularyData['file'],
+            $vocabularyData['url'],
+            $vocabularyData['format']
+        );
+
+        $namespaceUri = $vocabularyData['vocabulary']['o:namespace_uri'] ?? '';
+        $prefix = $vocabularyData['vocabulary']['o:prefix'] ?? '';
+        if (!$namespaceUri || !$prefix) {
+            throw new RuntimeException((string) new Message(
+                'A vocabulary must have a namespace uri and a prefix.' // @translate
+            ));
+        }
+
+        $vocabularyData['is_checked'] = true;
+        return $vocabularyData;
     }
 
     /**
