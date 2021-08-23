@@ -44,14 +44,15 @@ class InstallResources
     protected $services;
 
     /**
-     * @var \Omeka\Api\Manager
+     * @var \Omeka\Mvc\Controller\Plugin\Api
      */
     protected $api;
 
     public function __construct(ServiceLocatorInterface $services)
     {
         $this->services = $services;
-        $this->api = $services->get('Omeka\ApiManager');
+        // The api plugin allows to search one resource without throwing error.
+        $this->api = $services->get('ControllerPluginManager')->get('api');
     }
 
     /**
