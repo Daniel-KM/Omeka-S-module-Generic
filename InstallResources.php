@@ -166,9 +166,9 @@ class InstallResources
     {
         $vocabularyData = $this->prepareVocabularyData($vocabularyData, $module);
 
-        if (!empty($vocabularyData['old_namespace_uri'])) {
+        if (!empty($vocabularyData['update']['namespace_uri'])) {
             /** @var \Omeka\Api\Representation\VocabularyRepresentation $vocabularyRepresentation */
-            $vocabularyRepresentation = $this->api->searchOne('vocabularies', ['namespace_uri' => $vocabularyData['old_namespace_uri']])->getContent();
+            $vocabularyRepresentation = $this->api->searchOne('vocabularies', ['namespace_uri' => $vocabularyData['update']['namespace_uri']])->getContent();
             if ($vocabularyRepresentation) {
                 return true;
             }
@@ -338,7 +338,7 @@ class InstallResources
 
         $prefix = $vocabularyData['vocabulary']['o:prefix'];
         $namespaceUri = $vocabularyData['vocabulary']['o:namespace_uri'];
-        $oldNameSpaceUri = $vocabularyData['old_namespace_uri'] ?? null;
+        $oldNameSpaceUri = $vocabularyData['update']['namespace_uri'] ?? null;
 
         /** @var \Omeka\Entity\Vocabulary $vocabulary */
         if ($oldNameSpaceUri) {
