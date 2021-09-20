@@ -363,7 +363,7 @@ class InstallResources
         $entityManager->persist($vocabulary);
         $entityManager->flush();
 
-        // Upgrade the properties.
+        // Upgrade the classes and the properties.
         /** @var \Omeka\Stdlib\RdfImporter $rdfImporter */
         $rdfImporter = $this->services->get('Omeka\RdfImporter');
 
@@ -389,9 +389,11 @@ class InstallResources
 
         /** @var \Omeka\Entity\Property[] $properties */
         $owner = $vocabulary->getOwner();
-        $properties = $this->api->search('properties', ['vocabulary_id' => $vocabulary->getId()], ['responseContent' => 'resource'])->getContent();
-        foreach ($properties as $property) {
-            $property->setOwner($owner);
+        foreach (['resource_classes', 'properties'] as $name) {
+            $members = $this->api->search($name, ['vocabulary_id' => $vocabulary->getId()], ['responseContent' => 'resource'])->getContent();
+            foreach ($members as $member) {
+                $member->setOwner($owner);
+            }
         }
         $entityManager->flush();
 
