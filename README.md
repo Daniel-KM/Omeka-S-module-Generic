@@ -134,5 +134,5 @@ Copyright
 [GNU/GPL]: https://www.gnu.org/licenses/gpl-3.0.html
 [FSF]: https://www.fsf.org
 [OSI]: http://opensource.org
-[MIT]: http://http://opensource.org/licenses/MIT
+[MIT]: http://opensource.org/licenses/MIT
 [Daniel-KM]: https://gitlab.com/Daniel-KM "Daniel Berthereau"
