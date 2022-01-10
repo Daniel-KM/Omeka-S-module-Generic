@@ -537,8 +537,9 @@ SQL;
 
         // Check if the resource template exists, so it is not replaced.
         $label = $data['o:label'] ?? '';
-        try {
-            $resourceTemplate = $this->api->searchOne('resource_templates', ['label' => $label])->getContent();
+
+        $resourceTemplate = $this->api->searchOne('resource_templates', ['label' => $label])->getContent();
+        if ($resourceTemplate) {
             $message = new Message(
                 'The resource template named "%s" is already available and is skipped.', // @translate
                 $label
@@ -546,7 +547,6 @@ SQL;
             $messenger = new Messenger();
             $messenger->addWarning($message);
             return $resourceTemplate;
-        } catch (NotFoundException $e) {
         }
 
         // The check sets the internal ids of classes, properties and data types
