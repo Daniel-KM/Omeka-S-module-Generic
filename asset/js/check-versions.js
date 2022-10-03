@@ -53,21 +53,26 @@ $(document).ready(function() {
      * Adapted from Omeka S application/view/omeka/admin/module/browse.php,
      * that supports only semantic versioning schema and doesn't manage external repositories.
      */
-    $.get('https://raw.githubusercontent.com/Daniel-KM/UpgradeToOmekaS/master/_data/omeka_s_modules_versions.json')
+    $.get('https://raw.githubusercontent.com/Daniel-KM/UpgradeToOmekaS/master/_data/omeka_s_modules_versions.tsv')
         .done(function(data) {
             $('.version-notification').each(function(index) {
                 var addon = $(this);
                 var addonId = addon.data('addon-id');
-                if (addonId in data) {
+                var lastVersions = {};
+                data.split("\n").forEach(line => {
+                    const moduleVersion = line.split("\t");
+                    lastVersions[moduleVersion[0]] = moduleVersion[1];
+                });
+                if (addonId in lastVersions) {
                     // Still try semver to keep original url.
                     try {
-                        if (semver.lt(addon.data('current-version'), data[addonId])) {
+                        if (semver.lt(addon.data('current-version'), lastVersions[addonId])) {
                             addon.show();
                         }
                         return;
                     } catch (e) {
                     }
-                    if (compareVersionNumbers(addon.data('current-version'), data[addonId]) < 0) {
+                    if (compareVersionNumbers(addon.data('current-version'), lastVersions[addonId]) < 0) {
                         // Update the message with the module url if any.
                         var link = addon.closest('.module-meta').find('.module-name a');
                         link.length
