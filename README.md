@@ -82,6 +82,13 @@ files that contains vocabs, custom vocabs, and templates inside `data/` will be
 automatically imported.
 
 
+TODO
+----
+
+- [ ] Check version for themes.
+- [ ] Merge with EasyAdmin?
+
+
 Warning
 -------
 
