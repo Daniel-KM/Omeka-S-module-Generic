@@ -2,6 +2,8 @@ $(document).ready(function() {
     /**
      * Compare two software version numbers (e.g. 1.7.1).
      *
+     * This function works only with numerical parts.
+     *
      * @see https://jsfiddle.net/ripper234/Xv9WL/28/
      * @see https://stackoverflow.com/a/6832721/11236
      */
@@ -15,23 +17,18 @@ $(document).ready(function() {
         }
 
         // First, validate both numbers are true version numbers
-        function validateParts(parts) {
-            for (var i = 0; i < parts.length; ++i) {
-                if (!isPositiveInteger(parts[i])) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        if (!validateParts(v1parts) || !validateParts(v2parts)) {
+        if (!v1parts.every(isPositiveInteger) || !v2parts.every(isPositiveInteger)) {
             return NaN;
         }
+
+        v1parts = v1parts.map(Number);
+        v2parts = v2parts.map(Number);
 
         for (var i = 0; i < v1parts.length; ++i) {
             if (v2parts.length === i) {
                 return 1;
             }
+
             if (v1parts[i] === v2parts[i]) {
                 continue;
             }
@@ -40,7 +37,7 @@ $(document).ready(function() {
                 : -1;
         }
 
-        if (v1parts.length != v2parts.length) {
+        if (v1parts.length !== v2parts.length) {
             return -1;
         }
 
