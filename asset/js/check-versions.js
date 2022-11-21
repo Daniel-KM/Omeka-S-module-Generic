@@ -32,9 +32,7 @@ $(document).ready(function() {
             if (v1parts[i] === v2parts[i]) {
                 continue;
             }
-            return v1parts[i] > v2parts[i]
-                ? 1
-                : -1;
+            return v1parts[i] > v2parts[i] ? 1 : -1;
         }
 
         if (v1parts.length !== v2parts.length) {
