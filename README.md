@@ -130,7 +130,7 @@ altered, and that no provisions are either added or removed herefrom.
 Copyright
 ---------
 
-* Copyright Daniel Berthereau, 2018-2022 (see [Daniel-KM] on GitLab)
+* Copyright Daniel Berthereau, 2018-2023 (see [Daniel-KM] on GitLab)
 
 
 [Generic module]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
