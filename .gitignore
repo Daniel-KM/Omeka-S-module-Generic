@@ -1,8 +1,15 @@
+/asset/vendor
 /build
+/language/debug.po
+/language/debug.mo
+/language/chef.po
+/language/chef.mo
 /vendor
 /node_modules
 .sass-cache/
-.php_cs.cache
 .bundle
 .DS_Store
+.php_cs.cache
+.php-cs-fixer.cache
 composer.phar
+debug.log
