@@ -32,7 +32,6 @@ trait TesterTrait
         return $this->services->get('Omeka\EntityManager');
     }
      */
-
     protected function createUserAndLogin(
         $email,
         $role = 'guest',
