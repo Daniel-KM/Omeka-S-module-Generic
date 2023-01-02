@@ -873,30 +873,4 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         $logger->warn($message);
         return true;
     }
-
-    /**
-     * Get each line of a string separately.
-     *
-     * @deprecated Since 3.3.22. Use \Omeka\Form\Element\ArrayTextarea.
-     * @param string $string
-     * @return array
-     */
-    public function stringToList($string): array
-    {
-        return array_filter(array_map('trim', explode("\n", $this->fixEndOfLine($string))), 'strlen');
-    }
-
-    /**
-     * Clean the text area from end of lines.
-     *
-     * This method fixes Windows and Apple copy/paste from a textarea input.
-     *
-     * @deprecated Since 3.3.22. Use \Omeka\Form\Element\ArrayTextarea.
-     * @param string $string
-     * @return string
-     */
-    protected function fixEndOfLine($string): string
-    {
-        return str_replace(["\r\n", "\n\r", "\r"], ["\n", "\n", "\n"], $string);
-    }
 }
