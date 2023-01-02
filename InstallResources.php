@@ -249,16 +249,25 @@ class InstallResources
             return null;
         }
 
-        // TODO Manage uri and item ids.
-        $newTerms = $data['o:terms'] ?? [];
-        $existingTerms = method_exists($customVocab, 'listTerms') ? $customVocab->terms() : explode("\n", $customVocab->terms());
-        sort($newTerms);
-        sort($existingTerms);
-        if ($newTerms !== $existingTerms) {
-            return null;
+        $newItemSet = empty($data['o:item_set']) ? 0 : (int) $data['o:item_set'];
+        if ($newItemSet) {
+            $existingItemSet = $customVocab->itemSet();
+            return $existingItemSet && $newItemSet === $existingItemSet->id() ? true : null;
         }
 
-        return true;
+        $newUris = $data['o:uris'] ?? [];
+        if ($newUris) {
+            $existingUris = $customVocab->uris();
+            asort($newUris);
+            asort($existingUris);
+            return $newUris === $existingUris ? true : null;
+        }
+
+        $newTerms = $data['o:terms'] ?? [];
+        $existingTerms = $customVocab->terms();
+        sort($newTerms);
+        sort($existingTerms);
+        return $newTerms === $existingTerms ? true : null;
     }
 
     /**
@@ -526,7 +535,7 @@ SQL;
     /**
      * Create a resource template, with a check of its existence before.
      *
-     * @todo Some checks of the resource termplate controller are skipped currently.
+     * @todo Some checks of the resource template controller are skipped currently.
      *
      * @param string $filepath
      * @throws \Omeka\Api\Exception\RuntimeException
@@ -816,13 +825,31 @@ SQL;
             );
         }
 
-        //  TODO Manage uris and item ids.
-        $terms = method_exists($customVocab, 'typeValues') ? $customVocab->terms() : array_map('trim', explode(PHP_EOL, $customVocab->terms()));
-        $terms = array_merge($terms, $data['o:terms']);
-        $this->api->update('custom_vocabs', $customVocab->id(), [
-            'o:label' => $label,
-            'o:terms' => $this->isModuleVersionAtLeast('CustomVocab', '1.7.0') ? $terms : implode(PHP_EOL, $terms),
-        ], [], ['isPartial' => true]);
+        $newItemSet = empty($data['o:item_set']) ? 0 : (int) $data['o:item_set'];
+        $newUris = $data['o:uris'] ?? [];
+        $newTerms = $data['o:terms'] ?? [];
+        if ($newItemSet) {
+            $this->api->update('custom_vocabs', $customVocab->id(), [
+                'o:label' => $label,
+                'o:item_set' => $newItemSet,
+                'o:terms' => [],
+                'o:uris' => [],
+            ], [], ['isPartial' => true]);
+        } elseif ($newUris) {
+            $this->api->update('custom_vocabs', $customVocab->id(), [
+                'o:label' => $label,
+                'o:item_set' => null,
+                'o:terms' => [],
+                'o:uris' => $newUris,
+            ], [], ['isPartial' => true]);
+        } elseif ($newTerms) {
+            $this->api->update('custom_vocabs', $customVocab->id(), [
+                'o:label' => $label,
+                'o:item_set' => null,
+                'o:terms' => array_merge($customVocab->terms(), $newTerms),
+                'o:uris' => [],
+            ], [], ['isPartial' => true]);
+        }
 
         return $customVocab;
     }
