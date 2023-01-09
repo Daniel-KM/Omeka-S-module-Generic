@@ -605,6 +605,49 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         $fieldset = $services->get('FormElementManager')->get($settingFieldsets[$settingsType]);
         $fieldset->setName($space);
         $form = $event->getTarget();
+
+        // In Omeka S v4, settings  are no more managed with fieldsets, but with
+        // "element groups", to de-correlate setting storage and display.
+
+        // Handle form loading.
+        // There are default element groups:
+        // - Settings:
+        //   - general
+        //   - security
+        // - Site settings:
+        //   - general
+        //   - language
+        //   - browse
+        //   - show
+        //   - search
+        // - User settings: fieldsets "user-information"; "user-settings", "change-password"
+        // and "edit-keys" are kept, but groups are added to fieldset "user-settings":
+        //   - columns
+        //   - browse_defaults
+        // There are two possibilities to manage module features in settings:
+        // - make each module a group
+        // - or create new groups for each set of features: resource metadata,
+        // site and pages params, viewers, contributions, public browse, public
+        // resource, jobs to run…
+        // The second way is more readable for admin, but in most of the cases,
+        // features are very different, so there will be a group by module
+        // anyway. Similar to module config, but config is not end-user friendly
+        // (multiple pages).
+        // So for now, let each module choose during upgrade to v4.
+        // Nevertheless, to use group feature smartly, it is recommended to use
+        // a generic list of groups similar to the site settings ones.
+        // Maybe sub-groups may be interesting, but not possible for now.
+        // In practice, there is a new option to set in each fieldset the group
+        // where params are displayed.
+
+        // TODO Order element groups.
+        // TODO Move main params to site settings and user settings.
+
+        $fieldsetElementGroups = $fieldset->getOption('element_groups');
+        if ($fieldsetElementGroups) {
+            $form->setOption('element_groups', array_merge($form->getOption('element_groups'), $fieldsetElementGroups));
+        }
+
         // The user view is managed differently.
         if ($settingsType === 'user_settings') {
             // This process allows to save first level elements automatically.
