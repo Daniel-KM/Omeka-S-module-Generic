@@ -75,6 +75,13 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         $this->setServiceLocator($services);
         $translator = $services->get('MvcTranslator');
         $this->preInstall();
+        if (!$this->checkDependency()) {
+            $message = new Message(
+                $translator->translate('This module requires the module "%s".'), // @translate
+                $this->dependency
+            );
+            throw new ModuleCannotInstallException((string) $message);
+        }
         if (!$this->checkDependencies()) {
             if (count($this->dependencies) === 1) {
                 $message = new Message(
@@ -793,6 +800,19 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
             $data[$name] = $val;
         }
         return $data;
+    }
+
+    /**
+     * Check if the module has a dependency.
+     *
+     * This method is distinct of checkDependencies() for performance purpose.
+     *
+     * @return bool
+     */
+    protected function checkDependency(): bool
+    {
+        return empty($this->dependency)
+            || $this->isModuleActive($this->dependency);
     }
 
     /**
