@@ -396,6 +396,20 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
         return $result;
     }
 
+    protected function getServiceSettings(string $settingsType): \Omeka\Settings\AbstractSettings
+    {
+        $settingsTypes = [
+            // 'config' => 'Omeka\Settings',
+            'settings' => 'Omeka\Settings',
+            'site_settings' => 'Omeka\Settings\Site',
+            'user_settings' => 'Omeka\Settings\User',
+        ];
+        if (!isset($settingsTypes[$settingsType])) {
+            return null;
+        }
+        return $this->getServiceLocator()->get($settingsTypes[$settingsType]);
+    }
+
     /**
      * Set, delete or update settings of the config of a module.
      *
@@ -540,16 +554,6 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
 
         $services = $this->getServiceLocator();
 
-        $settingsTypes = [
-            // 'config' => 'Omeka\Settings',
-            'settings' => 'Omeka\Settings',
-            'site_settings' => 'Omeka\Settings\Site',
-            'user_settings' => 'Omeka\Settings\User',
-        ];
-        if (!isset($settingsTypes[$settingsType])) {
-            return null;
-        }
-
         // TODO Check fieldsets in the config of the module.
         $settingFieldsets = [
             // 'config' => static::NAMESPACE . '\Form\ConfigForm',
@@ -561,7 +565,10 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
             return null;
         }
 
-        $settings = $services->get($settingsTypes[$settingsType]);
+        $settings = $this->getServiceSettings($settingsType);
+        if (!$settings) {
+            return null;
+        }
 
         switch ($settingsType) {
             case 'settings':
@@ -645,7 +652,7 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
 
         $fieldsetElementGroups = $fieldset->getOption('element_groups');
         if ($fieldsetElementGroups) {
-            $form->setOption('element_groups', array_merge($form->getOption('element_groups'), $fieldsetElementGroups));
+            $form->setOption('element_groups', array_merge($form->getOption('element_groups') ?: [], $fieldsetElementGroups));
         }
 
         // The user view is managed differently.
@@ -653,8 +660,8 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
             // This process allows to save first level elements automatically.
             // @see \Omeka\Controller\Admin\UserController::editAction()
             $formFieldset = $form->get('user-settings');
-            foreach ($fieldset->getFieldsets() as $element) {
-                $formFieldset->add($element);
+            foreach ($fieldset->getFieldsets() as $subFieldset) {
+                $formFieldset->add($subFieldset);
             }
             foreach ($fieldset->getElements() as $element) {
                 $formFieldset->add($element);
@@ -662,8 +669,38 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
             $formFieldset->populateValues($data);
             $fieldset = $formFieldset;
         } else {
-            $form->add($fieldset);
-            $form->get($space)->populateValues($data);
+            // Allow to save data and to manage modules compatible with
+            // Omeka S v3 and v4.
+            //
+            // In Omeka S v4, settings are no more de-nested, next to the new
+            // "element group" feature, where default elements are attached
+            // directly to the main form with a fake fieldset (not managed by
+            // laminas), without using the formCollection() option.
+            // So un-de-nested params are checked, but no more automatically
+            // saved.
+            // And when data is populated, it is not possible to determinate
+            // directly if the form is valid or not as a whole, because the
+            // check is done after the filling inside the controller.
+            // To manage this new feature, either remove fieldsets and attach
+            // elements directly to the form, either save elements via event
+            // "view.browse.before", where the form is available.
+            // This second way is simpler to manage modules compatible with
+            // Omeka S v3 and v4, but it is not possible because there is a
+            // redirect in the controller when post is successfull.
+            // So append all elements and sub-fieldsets on the root of the form.
+            if (version_compare(\Omeka\Module::VERSION, '4', '<')) {
+                $form->add($fieldset);
+                $form->get($space)->populateValues($data);
+            } else {
+                foreach ($fieldset->getFieldsets() as $subFieldset) {
+                    $form->add($subFieldset);
+                }
+                foreach ($fieldset->getElements() as $element) {
+                    $form->add($element);
+                }
+                $form->populateValues($data);
+                $fieldset = $form;
+            }
         }
 
         return $fieldset;
