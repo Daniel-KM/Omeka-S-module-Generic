@@ -671,6 +671,10 @@ SQL;
                 'geometry',
                 'geometry:coordinates',
                 'geometry:position',
+                // TODO Deprecated for v4.
+                'geometry:geometry',
+                'geometry:geography',
+                'geometry:geography:coordinates',
                 // DataTypeRdf.
                 'boolean',
                 'html',
