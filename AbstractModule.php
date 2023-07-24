@@ -390,7 +390,7 @@ abstract class AbstractModule extends \Omeka\Module\AbstractModule
             // No check: if a table cannot be removed, an exception will be
             // thrown later.
             foreach ($dropTables as $table) {
-                $connection->executeStatement("DROP TABLE `$table`;");
+                $connection->executeStatement("SET FOREIGN_KEY_CHECKS=0; DROP TABLE `$table`;");
             }
 
             $translator = $services->get('MvcTranslator');
