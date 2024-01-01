@@ -19,6 +19,9 @@ Eventual install and uninstall sql can be set in `data/install/` and upgrade
 code in `data/scripts`. Another class allows to check and install resources
 (vocabulary, resource templates, custom vocab, etc.).
 
+**Warning**: The module Generic was replaced by modules [Common] and [Easy Admin]
+and kept only for compatibility until next Omeka S major version.
+
 
 Installation
 ------------
@@ -31,6 +34,8 @@ installed or not enabled in the admin modules panel.
 
 Usage (for developer)
 ---------------------
+
+For new modules, use module [Common].
 
 ### Main Usage
 
@@ -82,13 +87,6 @@ files that contains vocabs, custom vocabs, and templates inside `data/` will be
 automatically imported.
 
 
-TODO
-----
-
-- [ ] Check version for themes.
-- [ ] Merge with EasyAdmin?
-
-
 Warning
 -------
 
@@ -130,12 +128,14 @@ altered, and that no provisions are either added or removed herefrom.
 Copyright
 ---------
 
-* Copyright Daniel Berthereau, 2018-2023 (see [Daniel-KM] on GitLab)
+* Copyright Daniel Berthereau, 2018-2024 (see [Daniel-KM] on GitLab)
 
 
 [Generic module]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
 [Omeka S]: https://omeka.org/s
 [GitLab]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
+[Common]: https://gitlab.com/Daniel-KM/Omeka-S-module-Common
+[Easy Admin]: https://gitlab.com/Daniel-KM/Omeka-S-module-EasyAdmin
 [module issues]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic/-/issues
 [CeCILL v2.1]: https://www.cecill.info/licences/Licence_CeCILL_V2.1-en.html
 [GNU/GPL]: https://www.gnu.org/licenses/gpl-3.0.html
