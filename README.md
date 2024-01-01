@@ -14,7 +14,7 @@ module, so it avoids the developer to copy-paste common code between modules.
 Internally, the logic is "config over code": so all settings have just to be set
 in the main `config/module.config.php` file, inside a key with the lowercase
 module name, with sub-keys `config`, `settings`, `site_settings`, `user_settings`
-and `block_settings`. All the forms have just to be standard Zend forms.
+and `block_settings`. All the forms have just to be standard Zend/Laminas forms.
 Eventual install and uninstall sql can be set in `data/install/` and upgrade
 code in `data/scripts`. Another class allows to check and install resources
 (vocabulary, resource templates, custom vocab, etc.).
