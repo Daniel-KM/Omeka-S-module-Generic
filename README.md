@@ -2,6 +2,10 @@ Generic Module (module for Omeka S)
 ===================================
 
 
+> **IMPORTANT**: The module Generic was replaced by modules [Common] and [Easy Admin]
+> and kept only for compatibility until next Omeka S major version. It won’t be
+> updated any more.
+
 > __New versions of this module and support for Omeka S version 3.0 and above
 > are available on [GitLab], which seems to respect users and privacy better
 > than the previous repository.__
@@ -18,9 +22,6 @@ and `block_settings`. All the forms have just to be standard Zend/Laminas forms.
 Eventual install and uninstall sql can be set in `data/install/` and upgrade
 code in `data/scripts`. Another class allows to check and install resources
 (vocabulary, resource templates, custom vocab, etc.).
-
-**Warning**: The module Generic was replaced by modules [Common] and [Easy Admin]
-and kept only for compatibility until next Omeka S major version.
 
 
 Installation
