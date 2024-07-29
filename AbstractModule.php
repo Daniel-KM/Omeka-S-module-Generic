@@ -49,6 +49,8 @@ use Omeka\Stdlib\Message;
  * code in `data/scripts`.
  *
  * See readme.
+ *
+ * @deprecated Use module Common that includes the same methods via a trait.
  */
 abstract class AbstractModule extends \Omeka\Module\AbstractModule
 {

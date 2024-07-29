@@ -36,6 +36,9 @@ use Omeka\Entity\Vocabulary;
 use Omeka\Module\Exception\ModuleCannotInstallException;
 use Omeka\Stdlib\Message;
 
+/**
+ * @deprecated Use module Common that includes the same methods via a trait.
+ */
 class InstallResources
 {
     /**
